@@ -1,0 +1,7 @@
+dump
+annotations
+run
+images
+*.zip
+
+__pycache__
