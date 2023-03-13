@@ -70,7 +70,7 @@ def train_model(model: nn.Module,
             best_val = best_reduce(metrics[best_metric])
             best_val_epc = epoch+1
 
-    model.load_state_dict(best_params)
+    # model.load_state_dict(best_params)
     train_metr["best_val"] = best_val
     train_metr["best_val_epc"] = best_val_epc
     print("Loaded saved params from epoch %d with %s %s of %.4f" % (
@@ -94,10 +94,16 @@ def make_and_train_model(binaryepochs: int,
     )
 
     _cache = {}
+    positives = set()
+    for key in labels:
+        positives = positives.union(labels[key])
+    pos_in_train = train_set.intersection(positives)
+    bin_pos_w = len(pos_in_train)*2/(len(train_set)-len(pos_in_train))
     train_data = data_io.ImageDataSet(train_set, labels, cache=_cache) +\
         data_io.ImageDataSet(train_set, labels,
                              transforms=ftransforms.hflip,
                              cache=_cache)
+
     dev_data = data_io.ImageDataSet(dev_set, labels)
 
     train_weights = train_utils.pos_weights(train_set, labels).to(device)
@@ -116,7 +122,10 @@ def make_and_train_model(binaryepochs: int,
         binary_model = models.CNN_binary(128, 128).to(device)
 
         loss_func = torch.nn.NLLLoss(reduction="sum")
-        optimizer = optim.Adam(binary_model.parameters(), lr=0.0005)
+        #    weight=torch.Tensor((1/bin_pos_w, bin_pos_w)).to(device)
+        # )
+        optimizer = optim.Adam(binary_model.parameters(),
+                               lr=0.0005, weight_decay=0.001)
 
         dev_metr_bin, train_metr_bin = train_model(binary_model,
                                                    optimizer,
@@ -150,9 +159,9 @@ def make_and_train_model(binaryepochs: int,
 
     if (binaryepochs > 0):
         for key in dev_metr_bin:
-            dev_metr["binary_"+key] = dev_metr_bin
+            dev_metr["binary_"+key] = dev_metr_bin[key]
         for key in train_metr_bin:
-            train_metr["binary_"+key] = train_metr_bin
+            train_metr["binary_"+key] = train_metr_bin[key]
 
     return model, dev_metr, train_metr
 

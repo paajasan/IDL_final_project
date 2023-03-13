@@ -202,6 +202,9 @@ class ImageDataSet(data.Dataset):
         num = self.nums[index]
         if (num not in self.cache):
             p = self.paths[num]
+            # dat = read_image(str(p))/255
+            # if (dat.shape[0] == 1):
+            #     dat = dat.expand(3, *dat.shape[1:])
             dat = transforms.Grayscale()(read_image(str(p)))/255
             self.cache[num] = dat
         else:
