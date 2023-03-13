@@ -122,8 +122,6 @@ def make_and_train_model(binaryepochs: int,
         binary_model = models.CNN_binary(128, 128).to(device)
 
         loss_func = torch.nn.NLLLoss(reduction="sum")
-        #    weight=torch.Tensor((1/bin_pos_w, bin_pos_w)).to(device)
-        # )
         optimizer = optim.Adam(binary_model.parameters(),
                                lr=0.0005, weight_decay=0.001)
 

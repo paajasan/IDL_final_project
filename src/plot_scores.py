@@ -7,7 +7,7 @@ import data_io
 dat_train = {}
 dat_dev = {}
 
-for num in range(1, 8):
+for num in range(1, 9):
     with np.load("data_train.%d.npz" % num) as npz:
         dat_train[num] = dict(npz)
     print(num, dat_train[num]["binary_best_val_epc"],
@@ -32,8 +32,8 @@ fig, axes = plt.subplots(7, 2)
 for j, num in enumerate(dat_train):
     print(dat_train[num][var].shape)
     for i in range(dat_train[num][var].shape[1]):
-        # axes[i//2, i % 2].plot(dat_train[num][var][:last, i],
-        #                       "-.", color="C%d" % (j))
+        axes[i//2, i % 2].plot(dat_train[num][var][:last, i],
+                               "-.", color="C%d" % (j))
         axes[i//2, i % 2].plot(dat_dev[num][var][:last, i], color="C%d" % (j))
         axes[i//2, i % 2].set_title("%s (%d, %d)" % (lbl[i],
                                     len(labels[lbl[i]].intersection(
