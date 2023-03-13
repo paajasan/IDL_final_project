@@ -64,11 +64,11 @@ def calc_metrics(counts):
 def score_model(model: nn.Module,
                 dataloader: data.DataLoader,
                 device: torch.device,
-                loss_function=None,
-                single_ind: int = None,
+                loss_function: nn.modules.loss._Loss = None,
+                binary_model: bool = False,
                 return_preds: bool = False):  # -> Dict[str, Union[float, torch.Tensor]]:
     loss = 0
-    if (single_ind is None):
+    if (not binary_model):
         numlabels = dataloader.__iter__().__next__()[1].shape[-1]
     else:
         numlabels = 1
@@ -85,15 +85,20 @@ def score_model(model: nn.Module,
     with torch.no_grad():
         model.eval()
         for data, target in dataloader:
-            if (not single_ind is None):
-                target = target[:, single_ind:single_ind+1]
+            if (binary_model):
+                target = target.any(axis=-1).to(dtype=int)
             data, target = data.to(device), target.to(device)
 
             probs = model(data)
-            pred = probs > 0
-
             if (not loss_function is None):
                 loss += loss_function(probs, target).item()
+
+            if (binary_model):
+                pred = probs.argmax(axis=-1, keepdim=True)
+                # Add a new dimension as the last dimension
+                target = target[..., None]
+            else:
+                pred = probs > 0
 
             total += pred.shape[0]
 

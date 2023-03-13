@@ -46,7 +46,7 @@ def train_model(model: nn.Module,
                                           loss_function=loss_function,
                                           dataloader=train_loader,
                                           device=device,
-                                          binary_model=True,
+                                          binary_model=binary_model,
                                           transforms=transforms)
         # Append metrics to dict
         for key in metrics:
@@ -59,7 +59,7 @@ def train_model(model: nn.Module,
                                           dev_loader,
                                           device,
                                           loss_function,
-                                          binary_model=True)
+                                          binary_model=binary_model)
         for key in metrics:
             dev_metr[key].append(metrics[key])
         score_utils.print_metrics(metrics, "Dev")
@@ -79,7 +79,8 @@ def train_model(model: nn.Module,
     return dev_metr, train_metr
 
 
-def make_and_train_model(maxepoch: int,
+def make_and_train_model(binaryepochs: int,
+                         maxepoch: int,
                          batch_size: int,
                          device: torch.device):
     labels, train_set, dev_set, _ = data_io.load_splits()
@@ -101,20 +102,43 @@ def make_and_train_model(maxepoch: int,
 
     train_weights = train_utils.pos_weights(train_set, labels).to(device)
 
+    print("Possible labels:", [key for key in labels])
+    print("weights:", train_weights)
+
     train_loader = data.DataLoader(
         train_data, batch_size=batch_size, shuffle=True)
     dev_loader = data.DataLoader(dev_data, batch_size=batch_size)
 
+    if (binaryepochs > 0):
+
+        print("Pretraining a binary model")
+
+        binary_model = models.CNN_binary(128, 128).to(device)
+
+        loss_func = torch.nn.NLLLoss(reduction="sum")
+        optimizer = optim.Adam(binary_model.parameters(), lr=0.0005)
+
+        dev_metr_bin, train_metr_bin = train_model(binary_model,
+                                                   optimizer,
+                                                   loss_func,
+                                                   train_loader, dev_loader,
+                                                   device=device,
+                                                   maxepoch=binaryepochs,
+                                                   transforms=train_random_transforms,
+                                                   binary_model=True
+                                                   )
+
+    model = models.CNN(len(labels), 128, 128).to(device)
+
+    if (binaryepochs > 0):
+        model.base.load_state_dict(binary_model.base.state_dict())
+        del binary_model
+
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
     loss_func = torch.nn.BCEWithLogitsLoss(
         pos_weight=train_weights,
         reduction="sum"
     )
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
-
-    model = models.CNN(len(labels), 128, 128).to(device)
-
-    print("Possible labels:", [key for key in labels])
-    print("weights:", train_weights)
 
     dev_metr, train_metr = train_model(model,
                                        optimizer,
@@ -130,7 +154,8 @@ def make_and_train_model(maxepoch: int,
 if __name__ == "__main__":
     args = cmd_line_funcs.train_parser()
     train_utils.SLURM_MODE = args.slurm_mode
-    model, dev_metr, train_metr = make_and_train_model(maxepoch=args.maxepoch,
+    model, dev_metr, train_metr = make_and_train_model(binaryepochs=args.binary_start,
+                                                       maxepoch=args.maxepoch,
                                                        batch_size=args.batch_size,
                                                        device=args.device)
 

@@ -31,7 +31,7 @@ def train_epoch(model: nn.Module,
     total = 0
     for batch_num, (data, target) in enumerate(dataloader):
         if (binary_model):
-            target = torch.Tensor(target).any(axis=-1)
+            target = target.any(axis=-1).to(dtype=int)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
 
@@ -40,9 +40,14 @@ def train_epoch(model: nn.Module,
             data = transforms(data)
 
         probs = model(data)
-        pred = probs > 0
-
         loss = loss_function(probs, target)
+
+        if (binary_model):
+            pred = probs.argmax(axis=-1, keepdim=True)
+            # Add a new dimension as the last dimension
+            target = target[..., None]
+        else:
+            pred = probs > 0
 
         total += pred.shape[0]
 

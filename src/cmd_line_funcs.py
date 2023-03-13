@@ -12,18 +12,16 @@ def train_parser():
     argP.add_argument("-d", "--device", type=torch.device,
                       default=torch.device(DEFAULT_DEVICE),
                       help="Maximum number of training epochs to run (default: %s)." % DEFAULT_DEVICE)
-    argP.add_argument("--maxepoch", type=int, default=100,
+    argP.add_argument("-e", "--maxepoch", type=int, default=100,
                       help="Maximum number of training epochs to run (default: %(default)s).")
     argP.add_argument("-b", "--batch-size", type=int, default=100,
                       help="Batch size (default: %(default)s).")
     argP.add_argument("-w", "--early-stop-window", type=int, default=4,
                       help="rolling mean window for early stopping (default: %(default)s).")
-    argP.add_argument("-b", "--binary-start", action="store_true",
-                      help="Pretrain a binary model to use transfer learning.")
+    argP.add_argument("-s", "--binary-start", type=int, default=0,
+                      help="Pretrain a binary model to use transfer learning, running this many epochs.")
     argP.add_argument("-n", "--model-number", type=int, default=1,
                       help="The number for the model, only affecting the output name of the saved model (default: %(default)s).")
-    argP.add_argument("-i", "--label-index", type=int, default=None,
-                      help="The index of single model label to run. Only used when --single-model is set (default: run all).")
     argP.add_argument("--slurm-mode", action="store_true",
                       help="Run in SLURm mode (changes stdout output only).")
     return argP.parse_args()
