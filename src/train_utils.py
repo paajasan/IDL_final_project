@@ -16,10 +16,10 @@ def train_epoch(model: nn.Module,
                 loss_function: nn.modules.loss._Loss,
                 dataloader: data.DataLoader,
                 device: torch.device,
-                single_ind: int = None,
+                binary_model: bool = False,
                 transforms: nn.Module = None):
     train_loss = 0
-    if (single_ind is None):
+    if (not binary_model):
         numlabels = dataloader.__iter__().__next__()[1].shape[-1]
     else:
         numlabels = 1
@@ -30,8 +30,8 @@ def train_epoch(model: nn.Module,
 
     total = 0
     for batch_num, (data, target) in enumerate(dataloader):
-        if (not single_ind is None):
-            target = target[:, single_ind:single_ind+1]
+        if (binary_model):
+            target = torch.Tensor(target).any(axis=-1)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
 
@@ -76,37 +76,3 @@ def pos_weights(data_set: Set[int],
         num_pos = len(data_set.intersection(labels[lbl]))
         weights[i] = (len(data_set)-num_pos)/num_pos
     return weights
-
-
-class EarlyStopper:
-    def __init__(self, window=2):
-        self.window = window
-        self.prev_queue = deque(maxlen=window)
-        self.curr_queue = deque(maxlen=window)
-        self.curr_sum = 0
-        self.prev_sum = 0
-
-    def add_value(self, val):
-        if (len(self.curr_queue) == self.curr_queue.maxlen):
-            a = self.curr_queue.pop()
-            self.curr_sum -= a
-            if (len(self.prev_queue) == self.prev_queue.maxlen):
-                self.prev_sum -= self.prev_queue.pop()
-            self.prev_queue.appendleft(a)
-            self.prev_sum += a
-
-        self.curr_queue.appendleft(val)
-        self.curr_sum += val
-
-    def prev_val(self):
-        if (len(self.prev_queue) < self.window):
-            return 0.0
-        return self.prev_sum/len(self.prev_queue)
-
-    def curr_val(self):
-        if (len(self.curr_queue) < self.window):
-            return 0.0
-        return self.curr_sum/len(self.curr_queue)
-
-    def early_stop(self):
-        return self.curr_val() < self.prev_val()

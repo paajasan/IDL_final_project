@@ -3,6 +3,8 @@ import torch
 from torch import nn
 from torch.utils import data
 
+from typing import List
+
 import score_utils
 import train_utils
 import data_io
@@ -41,7 +43,7 @@ def test_model(model: nn.Module,
     return dev_metrics, train_metrics, test_metrics
 
 
-def load_and_test_model(batch_size: int, model_num: int, device: torch.device):
+def load_and_test_model(batch_size: int, model_nums: List[int], device: torch.device):
     labels, train_set, dev_set, test_set = data_io.load_splits(
         allow_reload=False
     )
@@ -61,9 +63,14 @@ def load_and_test_model(batch_size: int, model_num: int, device: torch.device):
         reduction="sum"
     )
 
-    model = models.CNN_basic(len(labels), 128, 128).to(device)
-
-    data_io.load_model_params(model, model_num)
+    if (len(model_nums) == 1):
+        model = models.CNN(len(labels), 128, 128).to(device)
+        data_io.load_model_params(model, model_nums[0])
+    else:
+        model = models.CNN_ensemble(
+            len(labels), 128, 128, len(model_nums)).to(device)
+        for i, mdl in zip(model_nums, model.cnns):
+            data_io.load_model_params(mdl, i)
 
     print("Possible labels:", [key for key in labels])
     print("weights:", train_weights)
@@ -81,6 +88,6 @@ def load_and_test_model(batch_size: int, model_num: int, device: torch.device):
 if __name__ == "__main__":
     args = cmd_line_funcs.test_parser()
     model, dev_metrics, train_metrics, test_metrics = load_and_test_model(batch_size=args.batch_size,
-                                                                          model_num=args.model_number,
+                                                                          model_nums=args.model_number,
                                                                           device=args.device)
     data_io.save_test_results(dev_metrics, train_metrics, test_metrics)
