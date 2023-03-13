@@ -148,6 +148,12 @@ def make_and_train_model(binaryepochs: int,
                                        maxepoch=maxepoch,
                                        transforms=train_random_transforms)
 
+    if (binaryepochs > 0):
+        for key in dev_metr_bin:
+            dev_metr["binary_"+key] = dev_metr_bin
+        for key in train_metr_bin:
+            train_metr["binary_"+key] = train_metr_bin
+
     return model, dev_metr, train_metr
 
 
