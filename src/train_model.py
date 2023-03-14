@@ -141,7 +141,7 @@ def make_and_train_model(binaryepochs: int,
         model.base.load_state_dict(binary_model.base.state_dict())
         del binary_model
 
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
     loss_func = torch.nn.BCEWithLogitsLoss(
         pos_weight=train_weights,
         reduction="sum"

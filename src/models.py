@@ -13,14 +13,14 @@ class CNN_base(nn.Module):
         h_aft_pools = ((height//4)//4)
 
         self.base = nn.Sequential(
-            nn.Conv2d(1, 32, 5, padding=2),
+            nn.Conv2d(1, 16, 5, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(4, 4),
-            nn.Conv2d(32, 64, 5, padding=2, groups=8),
+            nn.Conv2d(16, 32, 5, padding=2, groups=8),
             nn.ReLU(),
             nn.MaxPool2d(4, 4),
             nn.Flatten(1),
-            nn.Linear(64*w_aft_pools*h_aft_pools, 1024),
+            nn.Linear(32*w_aft_pools*h_aft_pools, 1024),
             nn.ReLU(),
             nn.Linear(1024, LAST_LAYER_SIZE),
             nn.ReLU()
