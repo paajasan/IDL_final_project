@@ -16,8 +16,7 @@ def train_epoch(model: nn.Module,
                 loss_function: nn.modules.loss._Loss,
                 dataloader: data.DataLoader,
                 device: torch.device,
-                binary_model: bool = False,
-                transforms: nn.Module = None):
+                binary_model: bool = False):
     train_loss = 0
     if (not binary_model):
         numlabels = dataloader.__iter__().__next__()[1].shape[-1]
@@ -34,10 +33,6 @@ def train_epoch(model: nn.Module,
             target = target.any(axis=-1).to(dtype=int)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-
-        # apply random transforms
-        if (not transforms is None):
-            data = transforms(data)
 
         probs = model(data)
         loss = loss_function(probs, target)

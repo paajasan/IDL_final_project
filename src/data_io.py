@@ -145,21 +145,21 @@ def load_splits(force_reload=False, allow_reload=True):
     return labels, train_set, dev_set, test_set
 
 
-def save_model(model, dev_metr, train_metr, num=1, lbl_ind=None):
-    name = "" if (lbl_ind is None) else (".lbl.%d" % lbl_ind)
+def save_model(model, dev_metr, train_metr, num=1, pretrained=False):
+    name = ".pre" if (pretrained) else ""
     torch.save(model.state_dict(), "model%s.%d.pt" % (name, num))
     np.savez_compressed("data_dev%s.%d.npz" % (name, num), **dev_metr)
     np.savez_compressed("data_train%s.%d.npz" % (name, num), **train_metr)
 
 
-def save_test_results(dev_metr, train_metr, test_metr):
+def save_test_results(dev_metr, train_metr, test_metr, pretrained=False):
     np.savez_compressed("test_results_train.npz", **train_metr)
     np.savez_compressed("test_results_dev.npz", **dev_metr)
     np.savez_compressed("test_results_test.npz", **test_metr)
 
 
-def load_model_params(model, num=1, lbl_ind=None):
-    name = "" if (lbl_ind is None) else (".lbl.%d" % lbl_ind)
+def load_model_params(model, num=1, pretrained=False):
+    name = ".pre" if (pretrained) else ""
     model.load_state_dict(torch.load("model%s.%d.pt" % (name, num)))
 
 
@@ -168,7 +168,8 @@ class ImageDataSet(data.Dataset):
                  labels: Dict[str, Set[int]],
                  transforms=None,
                  img_folder=IMG_FOLDER,
-                 cache: Dict[int, torch.Tensor] = {}):
+                 cache: Dict[int, torch.Tensor] = {},
+                 preprocessor=None):
         super().__init__()
         nums = []
         paths = {}
@@ -186,6 +187,7 @@ class ImageDataSet(data.Dataset):
         self.nums = nums
         self.paths = paths
         self.cache = cache
+        self.preprocessor = preprocessor
         # Make label vectors
         self.labels = {}
         for num in paths:
@@ -202,14 +204,20 @@ class ImageDataSet(data.Dataset):
         num = self.nums[index]
         if (num not in self.cache):
             p = self.paths[num]
-            dat = transforms.Grayscale()(read_image(str(p)))/255
+            dat = read_image(str(p))
+            if (dat.shape[0] == 1):
+                dat = dat.expand(3, *dat.shape[1:])
+            # dat = transforms.Grayscale()(read_image(str(p)))/255
             self.cache[num] = dat
         else:
             dat = self.cache[num]
 
         if (not self.transforms is None):
             dat = self.transforms(dat)
-        return dat, self.labels[num]
+        if (self.preprocessor is None):
+            return dat, self.labels[num]/255
+
+        return torch.Tensor(self.preprocessor(dat)["pixel_values"][0].copy())/255, self.labels[num]
 
 
 if __name__ == "__main__":

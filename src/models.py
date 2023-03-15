@@ -1,6 +1,8 @@
-#!/usr/bin/env python3
+import numpy as np
 import torch
 from torch import nn
+
+from transformers import BeitImageProcessor, BeitModel, BeitConfig, AutoProcessor
 
 LAST_LAYER_SIZE = 512
 
@@ -30,6 +32,9 @@ class CNN_base(nn.Module):
 
     def forward(self, x):
         return self.output_layer(self.base(x))
+
+    def train_params(self):
+        return self.parameters()
 
 
 class CNN_binary(CNN_base):
@@ -68,3 +73,37 @@ class CNN_ensemble(CNN):
 
     def major_vote(self, x):
         return sum([cnn.predict(x) for cnn in self.cnns])/len(self.cnns) > 0.5
+
+
+class Pretrained(nn.Module):
+    def __init__(self, num_classes, train_all=False):
+        super(Pretrained, self).__init__()
+
+        self.preprocess = AutoProcessor.from_pretrained(
+            'microsoft/beit-base-patch16-224'
+        )
+        self.beit = BeitModel.from_pretrained(
+            'microsoft/beit-base-patch16-224'
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(768, 512),
+            nn.ReLU(),
+            nn.Linear(512, num_classes)
+        )
+        self.train()
+        self.train_all = train_all
+
+        if (not train_all):
+            for params in self.beit.parameters():
+                params.requires_grad = False
+
+    def forward(self, x):
+        beit_out = self.beit(x)
+        return self.classifier(beit_out.pooler_output)
+
+    def train_params(self):
+        if (self.train_all):
+            return self.parameters()
+        return self.classifier.parameters()

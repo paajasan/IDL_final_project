@@ -22,6 +22,14 @@ def train_parser():
                       help="Pretrain a binary model to use transfer learning, running this many epochs.")
     argP.add_argument("-n", "--model-number", type=int, default=1,
                       help="The number for the model, only affecting the output name of the saved model (default: %(default)s).")
+    argP.add_argument("--pretrained", action="store_true",
+                      help="Use a pretrained BEiT model.")
+    argP.add_argument("--train-all", action="store_true",
+                      help="Train also the pretrained BEiT model.")
+    argP.add_argument("-lr", "--learning-rate", type=float, default=0.0005,
+                      help="Set the learning rate (default: %(default)s).")
+    argP.add_argument("-wd", "--weight-decay", type=float, default=0.001,
+                      help="Set the weight decay (l2-regularisation) (default: %(default)s).")
     argP.add_argument("--slurm-mode", action="store_true",
                       help="Run in SLURm mode (changes stdout output only).")
     return argP.parse_args()
@@ -36,4 +44,6 @@ def test_parser():
                       help="Batch size (default: %(default)s).")
     argP.add_argument("-n", "--model-number", nargs="+", type=int, default=[1],
                       help="The number for the model, afecting which model file is loaded (default: %(default)s).")
+    argP.add_argument("--pretrained", action="store_true",
+                      help="Load a pretrained BEiT model.")
     return argP.parse_args()

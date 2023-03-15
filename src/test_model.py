@@ -43,14 +43,34 @@ def test_model(model: nn.Module,
     return dev_metrics, train_metrics, test_metrics
 
 
-def load_and_test_model(batch_size: int, model_nums: List[int], device: torch.device):
+def load_and_test_model(batch_size: int, model_nums: List[int], pretrained: bool, device: torch.device):
     labels, train_set, dev_set, test_set = data_io.load_splits(
         allow_reload=False
     )
 
-    train_data = data_io.ImageDataSet(train_set, labels)
-    dev_data = data_io.ImageDataSet(dev_set, labels)
-    test_data = data_io.ImageDataSet(test_set, labels)
+    if (len(model_nums) > 1):
+        if (pretrained):
+            raise ValueError(
+                "Can't make an ensemble of pretrained, only supply one model num"
+            )
+        model = models.CNN_ensemble(
+            len(labels), 128, 128, len(model_nums)
+        ).to(device)
+        for i, mdl in zip(model_nums, model.cnns):
+            data_io.load_model_params(mdl, i)
+    else:
+        if (pretrained):
+            model = models.Pretrained(len(labels)).to(device)
+        else:
+            model = models.CNN(len(labels), 128, 128).to(device)
+        data_io.load_model_params(model, model_nums[0], pretrained=pretrained)
+
+    train_data = data_io.ImageDataSet(train_set, labels,
+                                      preprocessor=model.preprocess)
+    dev_data = data_io.ImageDataSet(dev_set, labels,
+                                    preprocessor=model.preprocess)
+    test_data = data_io.ImageDataSet(test_set, labels,
+                                     preprocessor=model.preprocess)
 
     train_weights = train_utils.pos_weights(train_set, labels).to(device)
 

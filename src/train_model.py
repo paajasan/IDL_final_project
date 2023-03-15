@@ -27,8 +27,7 @@ def train_model(model: nn.Module,
                 dev_loader: data.DataLoader,
                 maxepoch: int,
                 device: torch.device,
-                binary_model: bool = False,
-                transforms: nn.Module = None):
+                binary_model: bool = False):
     train_metr = collections.defaultdict(list)
     dev_metr = collections.defaultdict(list)
 
@@ -46,8 +45,7 @@ def train_model(model: nn.Module,
                                           loss_function=loss_function,
                                           dataloader=train_loader,
                                           device=device,
-                                          binary_model=binary_model,
-                                          transforms=transforms)
+                                          binary_model=binary_model)
         # Append metrics to dict
         for key in metrics:
             train_metr[key].append(metrics[key])
@@ -82,6 +80,10 @@ def train_model(model: nn.Module,
 def make_and_train_model(binaryepochs: int,
                          maxepoch: int,
                          batch_size: int,
+                         pretrained: bool,
+                         train_all: bool,
+                         lr: float,
+                         weight_decay: float,
                          device: torch.device):
     labels, train_set, dev_set, _ = data_io.load_splits()
     train_random_transforms = transforms.RandomApply(
@@ -93,18 +95,28 @@ def make_and_train_model(binaryepochs: int,
         p=0.9
     )
 
-    _cache = {}
-    positives = set()
-    for key in labels:
-        positives = positives.union(labels[key])
-    pos_in_train = train_set.intersection(positives)
-    bin_pos_w = len(pos_in_train)*2/(len(train_set)-len(pos_in_train))
-    train_data = data_io.ImageDataSet(train_set, labels, cache=_cache) +\
-        data_io.ImageDataSet(train_set, labels,
-                             transforms=ftransforms.hflip,
-                             cache=_cache)
+    if (pretrained):
+        model = models.Pretrained(len(labels),
+                                  train_all=train_all).to(device=device)
+    else:
+        model = models.CNN(len(labels), 128, 128).to(device=device)
 
-    dev_data = data_io.ImageDataSet(dev_set, labels)
+    _cache = {}
+
+    train_data = data_io.ImageDataSet(train_set,
+                                      labels,
+                                      transforms=train_random_transforms,
+                                      cache=_cache,
+                                      preprocessor=model.preprocess) +\
+        data_io.ImageDataSet(train_set, labels,
+                             transforms=transforms.Compose((
+                                 ftransforms.hflip,
+                                 train_random_transforms)),
+                             cache=_cache,
+                             preprocessor=model.preprocess)
+
+    dev_data = data_io.ImageDataSet(dev_set, labels,
+                                    preprocessor=model.preprocess)
 
     train_weights = train_utils.pos_weights(train_set, labels).to(device)
 
@@ -116,14 +128,16 @@ def make_and_train_model(binaryepochs: int,
     dev_loader = data.DataLoader(dev_data, batch_size=batch_size)
 
     if (binaryepochs > 0):
+        if (pretrained):
+            raise ValueError("Can't do a binary model when pretrained=True")
 
         print("Pretraining a binary model")
 
         binary_model = models.CNN_binary(128, 128).to(device)
 
         loss_func = torch.nn.NLLLoss(reduction="sum")
-        optimizer = optim.Adam(binary_model.parameters(),
-                               lr=0.0005, weight_decay=0.001)
+        optimizer = optim.Adam(binary_model.train_params(),
+                               lr=lr, weight_decay=weight_decay)
 
         dev_metr_bin, train_metr_bin = train_model(binary_model,
                                                    optimizer,
@@ -131,17 +145,14 @@ def make_and_train_model(binaryepochs: int,
                                                    train_loader, dev_loader,
                                                    device=device,
                                                    maxepoch=binaryepochs,
-                                                   transforms=train_random_transforms,
                                                    binary_model=True
                                                    )
 
-    model = models.CNN(len(labels), 128, 128).to(device)
-
-    if (binaryepochs > 0):
         model.base.load_state_dict(binary_model.base.state_dict())
         del binary_model
 
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = optim.Adam(model.train_params(),
+                           lr=lr, weight_decay=weight_decay)
     loss_func = torch.nn.BCEWithLogitsLoss(
         pos_weight=train_weights,
         reduction="sum"
@@ -152,8 +163,7 @@ def make_and_train_model(binaryepochs: int,
                                        loss_func,
                                        train_loader, dev_loader,
                                        device=device,
-                                       maxepoch=maxepoch,
-                                       transforms=train_random_transforms)
+                                       maxepoch=maxepoch)
 
     if (binaryepochs > 0):
         for key in dev_metr_bin:
@@ -170,6 +180,11 @@ if __name__ == "__main__":
     model, dev_metr, train_metr = make_and_train_model(binaryepochs=args.binary_start,
                                                        maxepoch=args.maxepoch,
                                                        batch_size=args.batch_size,
+                                                       pretrained=args.pretrained,
+                                                       train_all=args.train_all,
+                                                       lr=args.learning_rate,
+                                                       weight_decay=args.weight_decay,
                                                        device=args.device)
 
-    data_io.save_model(model, dev_metr, train_metr, args.model_number)
+    data_io.save_model(model, dev_metr, train_metr,
+                       args.model_number, pretrained=args.pretrained)
