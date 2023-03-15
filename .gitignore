@@ -1,7 +1,9 @@
 dump
 annotations
-run
+run/*
 images
 *.zip
+!/run/run_training.sh
+!/run/sbatch_launch.sh
 
 __pycache__
