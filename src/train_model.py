@@ -27,7 +27,8 @@ def train_model(model: nn.Module,
                 dev_loader: data.DataLoader,
                 maxepoch: int,
                 device: torch.device,
-                binary_model: bool = False):
+                binary_model: bool = False,
+                use_best: bool = False):
     train_metr = collections.defaultdict(list)
     dev_metr = collections.defaultdict(list)
 
@@ -64,16 +65,18 @@ def train_model(model: nn.Module,
 
         # Save the currently best model
         if (best_reduce(metrics[best_metric]) > best_val):
-            best_params = copy.deepcopy(model.state_dict())
+            if (use_best):
+                best_params = copy.deepcopy(model.state_dict())
             best_val = best_reduce(metrics[best_metric])
             best_val_epc = epoch+1
 
-    # model.load_state_dict(best_params)
+    if (use_best):
+        model.load_state_dict(best_params)
+        print("Loaded saved params from epoch %d with %s %s of %.4f" % (
+            best_val_epc, best_reduce.__name__, best_metric, best_val*100
+        ))
     train_metr["best_val"] = best_val
     train_metr["best_val_epc"] = best_val_epc
-    print("Loaded saved params from epoch %d with %s %s of %.4f" % (
-        best_val_epc, best_reduce.__name__, best_metric, best_val*100
-    ))
     return dev_metr, train_metr
 
 
@@ -84,7 +87,8 @@ def make_and_train_model(binaryepochs: int,
                          train_all: bool,
                          lr: float,
                          weight_decay: float,
-                         device: torch.device):
+                         device: torch.device,
+                         use_best: bool = False):
     labels, train_set, dev_set, _ = data_io.load_splits()
     train_random_transforms = transforms.RandomApply(
         [transforms.RandomAffine(degrees=10,
@@ -184,7 +188,8 @@ if __name__ == "__main__":
                                                        train_all=args.train_all,
                                                        lr=args.learning_rate,
                                                        weight_decay=args.weight_decay,
-                                                       device=args.device)
+                                                       device=args.device,
+                                                       use_best=args.use_best_params)
 
     data_io.save_model(model, dev_metr, train_metr,
                        args.model_number, pretrained=args.pretrained)

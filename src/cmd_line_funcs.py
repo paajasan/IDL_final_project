@@ -30,6 +30,8 @@ def train_parser():
                       help="Set the learning rate (default: %(default)s).")
     argP.add_argument("-wd", "--weight-decay", type=float, default=0.001,
                       help="Set the weight decay (l2-regularisation) (default: %(default)s).")
+    argP.add_argument("--use-best-params", action="store_true",
+                      help="Take the model parameters from the epoch with the best dev metric.")
     argP.add_argument("--slurm-mode", action="store_true",
                       help="Run in SLURm mode (changes stdout output only).")
     return argP.parse_args()
