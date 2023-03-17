@@ -7,7 +7,7 @@ from torchvision import transforms
 from torchvision.transforms import functional as ftransforms
 
 import numpy as np
-import random
+import time
 import copy
 import collections
 
@@ -38,6 +38,7 @@ def train_model(model: nn.Module,
     best_params = None
     best_val_epc = -1
     for epoch in range(maxepoch):
+        starttime = time.time()
         # print epoch info
         print("Training epoch %d:" % (epoch+1))
         # train epoch
@@ -69,6 +70,9 @@ def train_model(model: nn.Module,
                 best_params = copy.deepcopy(model.state_dict())
             best_val = best_reduce(metrics[best_metric])
             best_val_epc = epoch+1
+
+        print("Epoch took %s\n" %
+              train_utils.epoch_time(time.time()-starttime))
 
     if (use_best):
         model.load_state_dict(best_params)

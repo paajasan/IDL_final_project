@@ -76,3 +76,20 @@ def pos_weights(data_set: Set[int],
         num_pos = len(data_set.intersection(labels[lbl]))
         weights[i] = (len(data_set)-num_pos)/num_pos
     return weights
+
+
+def epoch_time(time):
+    """
+    Split time (given in seconds) into hours, minutes and seconds.
+    Only prints nonzero units.
+    """
+    outstr = ""
+    hours = time//3600
+    if (hours != 0):
+        outstr += "%d h " % hours
+    minutes = (time-hours*3600)//60
+    if (minutes != 0):
+        outstr += "%d min " % minutes
+    seconds = time-hours*3600-minutes*60
+    outstr += "%.2f s" % seconds
+    return outstr
