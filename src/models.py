@@ -80,17 +80,17 @@ class Pretrained(nn.Module):
         super(Pretrained, self).__init__()
 
         self.preprocess = AutoProcessor.from_pretrained(
-            'microsoft/beit-base-patch16-224'
+            'microsoft/beit-base-patch16-224-pt22k-ft22k',
+            cache_dir=".pretrained_cache"
         )
         self.beit = BeitModel.from_pretrained(
-            'microsoft/beit-base-patch16-224'
+            'microsoft/beit-base-patch16-224-pt22k-ft22k',
+            cache_dir=".pretrained_cache"
         )
 
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(768, 512),
-            nn.ReLU(),
-            nn.Linear(512, num_classes)
+            nn.Linear(768, num_classes)
         )
         self.train()
         self.train_all = train_all
