@@ -9,12 +9,28 @@ dat_dev = {}
 
 for num in range(1, 4):
     with np.load("data_train.pre.%d.npz" % num) as npz:
-        dat_train[num] = dict(npz)
+        dat_train["pre.%d" % num] = dict(npz)
     # print(num, dat_train[num]["binary_best_val_epc"],
     #      dat_train[num]["binary_best_val"])
-    print(num, dat_train[num]["best_val_epc"], dat_train[num]["best_val"])
+    print("pre.%d" % num,
+          dat_train["pre.%d" % num]["best_val_epc"],
+          dat_train["pre.%d" % num]["best_val"])
     with np.load("data_dev.pre.%d.npz" % num) as npz:
-        dat_dev[num] = dict(npz)
+        dat_dev["pre.%d" % num] = dict(npz)
+
+
+for num in range(1, 2):
+    with np.load("data_train.%d.npz" % num) as npz:
+        dat_train["%d" % num] = dict(npz)
+    print(num,
+          dat_train["%d" % num]["binary_best_val_epc"],
+          dat_train["%d" % num]["binary_best_val"])
+    print(num,
+          dat_train["%d" % num]["best_val_epc"],
+          dat_train["%d" % num]["best_val"])
+    with np.load("data_dev.%d.npz" % num) as npz:
+        dat_dev["%d" % num] = dict(npz)
+
 
 last = None
 labels, train_set, dev_set, _ = data_io.load_splits()
