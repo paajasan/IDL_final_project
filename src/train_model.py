@@ -106,17 +106,20 @@ def make_and_train_model(binaryepochs: int,
                                     translate=(0.1, 0.1),
                                     scale=(1.0, 1.75),
                                     shear=10,
-                                    interpolation=transforms.InterpolationMode.BILINEAR)
+                                    interpolation=transforms.InterpolationMode.BILINEAR),
+            data_io.RandomGaussNoise()
         ])
         test_transforms = transforms.Pad(48)
     else:
         model = models.CNN(len(labels), 128, 128).to(device=device)
-        train_transforms = transforms.RandomAffine(
-            degrees=10,
-            translate=(0.1, 0.1),
-            scale=(0.8, 1.2),
-            shear=2,
-            interpolation=transforms.InterpolationMode.BILINEAR)
+        train_transforms = transforms.Compose([
+            transforms.RandomAffine(degrees=15,
+                                    translate=(0.1, 0.1),
+                                    scale=(0.8, 1.2),
+                                    shear=5,
+                                    interpolation=transforms.InterpolationMode.BILINEAR),
+            data_io.RandomGaussNoise()
+        ])
 
     _cache = {}
 
@@ -133,6 +136,7 @@ def make_and_train_model(binaryepochs: int,
                              preprocessor=model.preprocess)
 
     dev_data = data_io.ImageDataSet(dev_set, labels,
+                                    transforms=test_transforms,
                                     preprocessor=model.preprocess)
 
     train_weights = train_utils.pos_weights(train_set, labels).to(device)
