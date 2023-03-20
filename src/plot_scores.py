@@ -7,7 +7,7 @@ import data_io
 dat_train = {}
 dat_dev = {}
 
-for num in range(1, 4):
+for num in range(1, 5):
     with np.load("data_train.pre.%d.npz" % num) as npz:
         dat_train["pre.%d" % num] = dict(npz)
     # print(num, dat_train[num]["binary_best_val_epc"],
@@ -19,7 +19,7 @@ for num in range(1, 4):
         dat_dev["pre.%d" % num] = dict(npz)
 
 
-for num in range(1, 2):
+for num in range(1, 4):
     with np.load("data_train.%d.npz" % num) as npz:
         dat_train["%d" % num] = dict(npz)
     print(num,
@@ -44,19 +44,34 @@ var = "F1"
 #    ax1.plot(dat_dev[num]["binary_"+var][:last, 0], color="C%d" % (j))
 # ax1.axhline(0, ls="--", color="red", alpha=0.3)
 
-fig, axes = plt.subplots(7, 2)
+fig, axes = plt.subplots(8, 2)
+lines1 = []
+lines2 = []
 for j, num in enumerate(dat_train):
     print(dat_train[num][var].shape)
     for i in range(dat_train[num][var].shape[1]):
         axes[i//2, i % 2].plot(dat_train[num][var][:last, i],
                                "-.", color="C%d" % (j))
-        axes[i//2, i % 2].plot(dat_dev[num][var][:last, i], color="C%d" % (j))
+        line, = axes[i//2, i % 2].plot(dat_dev[num][var][:last, i],
+                                       color="C%d" % (j),
+                                       label=num
+                                       )
+        if (i == 0):
+            if (num.startswith("pre")):
+                lines1.append(line)
+            else:
+                lines2.append(line)
         axes[i//2, i % 2].set_title("%s (%d, %d)" % (lbl[i],
                                     len(labels[lbl[i]].intersection(
                                         train_set)),
                                     len(labels[lbl[i]].intersection(dev_set))))
         if (j == 0):
             axes[i//2, i % 2].axhline(0, ls="--", color="red", alpha=0.3)
+
+axes[-1, 0].legend(handles=lines1, loc="upper right")
+axes[-1, 1].legend(handles=lines2, loc="upper left")
+for ax in axes[-1, :]:
+    ax.axis("off")
 fig.set_size_inches(6, 14)
 fig.tight_layout()
 plt.show()
