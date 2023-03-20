@@ -62,6 +62,7 @@ class CNN(CNN_base):
 class CNN_ensemble(CNN):
     def __init__(self, num_classes, width, height, num_children=5):
         super(CNN_base, self).__init__()
+        self.preprocess = None
 
         self.cnns = nn.ModuleList([CNN(num_classes, width, height)
                                   for i in range(num_children)])
