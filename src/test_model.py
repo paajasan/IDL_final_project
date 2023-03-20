@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 from torch.utils import data
+from torchvision import transforms
 
 from typing import List
 
@@ -48,6 +49,8 @@ def load_and_test_model(batch_size: int, model_nums: List[int], pretrained: bool
         allow_reload=False
     )
 
+    test_transforms = None
+
     if (len(model_nums) > 1):
         if (pretrained):
             raise ValueError(
@@ -61,15 +64,19 @@ def load_and_test_model(batch_size: int, model_nums: List[int], pretrained: bool
     else:
         if (pretrained):
             model = models.Pretrained(len(labels)).to(device)
+            test_transforms = transforms.Pad(48)
         else:
             model = models.CNN(len(labels), 128, 128).to(device)
         data_io.load_model_params(model, model_nums[0], pretrained=pretrained)
 
     train_data = data_io.ImageDataSet(train_set, labels,
+                                      transforms=test_transforms,
                                       preprocessor=model.preprocess)
     dev_data = data_io.ImageDataSet(dev_set, labels,
+                                    transforms=test_transforms,
                                     preprocessor=model.preprocess)
     test_data = data_io.ImageDataSet(test_set, labels,
+                                     transforms=test_transforms,
                                      preprocessor=model.preprocess)
 
     train_weights = train_utils.pos_weights(train_set, labels).to(device)
