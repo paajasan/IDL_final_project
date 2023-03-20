@@ -163,6 +163,17 @@ def load_model_params(model, num=1, pretrained=False):
     model.load_state_dict(torch.load("model%s.%d.pt" % (name, num)))
 
 
+class RandomGaussNoise(torch.nn.Module):
+    def __init__(self, std=5) -> None:
+        super().__init__()
+        self.std = std
+
+    def forward(self, img):
+        dtype = img.dtype
+        img = img + torch.randn(img.shape)*self.std
+        return img.to(dtype)
+
+
 class ImageDataSet(data.Dataset):
     def __init__(self, load_set: Set[int],
                  labels: Dict[str, Set[int]],
