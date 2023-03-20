@@ -215,7 +215,7 @@ class ImageDataSet(data.Dataset):
         if (not self.transforms is None):
             dat = self.transforms(dat)
         if (self.preprocessor is None):
-            return dat, self.labels[num]/255
+            return dat/255, self.labels[num]
 
         return torch.Tensor(self.preprocessor(dat)["pixel_values"][0].copy())/255, self.labels[num]
 
