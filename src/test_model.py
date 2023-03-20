@@ -83,15 +83,6 @@ def load_and_test_model(batch_size: int, model_nums: List[int], pretrained: bool
         reduction="sum"
     )
 
-    if (len(model_nums) == 1):
-        model = models.CNN(len(labels), 128, 128).to(device)
-        data_io.load_model_params(model, model_nums[0])
-    else:
-        model = models.CNN_ensemble(
-            len(labels), 128, 128, len(model_nums)).to(device)
-        for i, mdl in zip(model_nums, model.cnns):
-            data_io.load_model_params(mdl, i)
-
     print("Possible labels:", [key for key in labels])
     print("weights:", train_weights)
 
@@ -109,5 +100,7 @@ if __name__ == "__main__":
     args = cmd_line_funcs.test_parser()
     model, dev_metrics, train_metrics, test_metrics = load_and_test_model(batch_size=args.batch_size,
                                                                           model_nums=args.model_number,
+                                                                          pretrained=args.pretrained,
                                                                           device=args.device)
-    data_io.save_test_results(dev_metrics, train_metrics, test_metrics)
+    data_io.save_test_results(dev_metrics, train_metrics, test_metrics,
+                              pretrained=args.pretrained)
