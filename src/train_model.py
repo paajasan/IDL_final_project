@@ -94,32 +94,41 @@ def make_and_train_model(binaryepochs: int,
                          device: torch.device,
                          use_best: bool = False):
     labels, train_set, dev_set, _ = data_io.load_splits()
-    train_random_transforms = transforms.RandomApply(
-        [transforms.RandomAffine(degrees=10,
-                                 translate=(0.1, 0.1),
-                                 scale=(0.8, 1.2),
-                                 shear=2,
-                                 interpolation=transforms.InterpolationMode.BILINEAR)],
-        p=0.9
-    )
+
+    test_transforms = None
 
     if (pretrained):
         model = models.Pretrained(len(labels),
                                   train_all=train_all).to(device=device)
+        train_transforms = transforms.Compose([
+            transforms.Pad(48),
+            transforms.RandomAffine(degrees=20,
+                                    translate=(0.1, 0.1),
+                                    scale=(1.0, 1.75),
+                                    shear=10,
+                                    interpolation=transforms.InterpolationMode.BILINEAR)
+        ])
+        test_transforms = transforms.Pad(48)
     else:
         model = models.CNN(len(labels), 128, 128).to(device=device)
+        train_transforms = transforms.RandomAffine(
+            degrees=10,
+            translate=(0.1, 0.1),
+            scale=(0.8, 1.2),
+            shear=2,
+            interpolation=transforms.InterpolationMode.BILINEAR)
 
     _cache = {}
 
     train_data = data_io.ImageDataSet(train_set,
                                       labels,
-                                      transforms=train_random_transforms,
+                                      transforms=train_transforms,
                                       cache=_cache,
                                       preprocessor=model.preprocess) +\
         data_io.ImageDataSet(train_set, labels,
                              transforms=transforms.Compose((
                                  ftransforms.hflip,
-                                 train_random_transforms)),
+                                 train_transforms)),
                              cache=_cache,
                              preprocessor=model.preprocess)
 
@@ -153,7 +162,8 @@ def make_and_train_model(binaryepochs: int,
                                                    train_loader, dev_loader,
                                                    device=device,
                                                    maxepoch=binaryepochs,
-                                                   binary_model=True
+                                                   binary_model=True,
+                                                   use_best=use_best
                                                    )
 
         model.base.load_state_dict(binary_model.base.state_dict())
@@ -171,7 +181,8 @@ def make_and_train_model(binaryepochs: int,
                                        loss_func,
                                        train_loader, dev_loader,
                                        device=device,
-                                       maxepoch=maxepoch)
+                                       maxepoch=maxepoch,
+                                       use_best=use_best)
 
     if (binaryepochs > 0):
         for key in dev_metr_bin:
