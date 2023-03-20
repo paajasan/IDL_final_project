@@ -205,9 +205,15 @@ class ImageDataSet(data.Dataset):
         if (num not in self.cache):
             p = self.paths[num]
             dat = read_image(str(p))
-            if (dat.shape[0] == 1):
+            # Not the clearest vode, but if self.preprocessor is None,
+            # we are not using pretrained data, and might as well use
+            # the grayscale images.
+            if (self.preprocessor is None):
+                dat = transforms.Grayscale()(read_image(str(p)))/255
+            elif (dat.shape[0] == 1):
+                # But if we do use the pretrained model, we should
+                # expand the grayscale images to rgb
                 dat = dat.expand(3, *dat.shape[1:])
-            # dat = transforms.Grayscale()(read_image(str(p)))/255
             self.cache[num] = dat
         else:
             dat = self.cache[num]
