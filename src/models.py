@@ -29,6 +29,7 @@ class CNN_base(nn.Module):
         )
 
         self.output_layer = nn.Module()
+        self.preprocess = None
 
     def forward(self, x):
         return self.output_layer(self.base(x))
@@ -90,6 +91,10 @@ class Pretrained(nn.Module):
 
         self.classifier = nn.Sequential(
             nn.Flatten(),
+            nn.Linear(768, 768),
+            nn.GELU(),
+            nn.Linear(768, 768),
+            nn.GELU(),
             nn.Linear(768, num_classes)
         )
         self.train()
