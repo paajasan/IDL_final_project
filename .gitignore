@@ -2,6 +2,7 @@ dump
 annotations
 run/*
 images
+figs
 *.zip
 !/run/run_training.sh
 !/run/sbatch_launch.sh
