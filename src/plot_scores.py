@@ -10,14 +10,14 @@ import data_io
 dat_train = {}
 dat_dev = {}
 
-for num in range(1, 5):
+for num in range(4, 7):
     with np.load("data_train.pre.%d.npz" % num) as npz:
         dat_train["pre.%d" % num] = dict(npz)
     with np.load("data_dev.pre.%d.npz" % num) as npz:
         dat_dev["pre.%d" % num] = dict(npz)
 
 
-for num in range(8, 12):
+for num in range(1, 5):
     with np.load("data_train.%d.npz" % num) as npz:
         dat_train["%d" % num] = dict(npz)
     with np.load("data_dev.%d.npz" % num) as npz:
@@ -37,7 +37,7 @@ ax.set_title(f"total_accuracy")
 fig.savefig("../figs/total_acc.png")
 
 
-labels, train_set, dev_set, _ = data_io.load_splits()
+labels, train_set, dev_set, test_set = data_io.load_splits(allow_reload=False)
 lbl = [l for l in labels]
 for var in ["F1", "precision", "accuracy"]:
 
@@ -101,15 +101,16 @@ for var in ["F1", "precision", "accuracy"]:
 random.seed(13)
 image_nums = [int(p.stem[2:]) for p in data_io.IMG_FOLDER.iterdir()]
 pretrain_transforms = transforms.Compose([
-    transforms.Pad(48),
-    transforms.RandomAffine(degrees=20,
+    # transforms.Pad(48),
+    transforms.RandomAffine(degrees=15,
                             translate=(0.1, 0.1),
-                            scale=(1.0, 1.75),
-                            shear=10,
+                            scale=(0.8, 1.2),
+                            shear=5,
                             interpolation=transforms.InterpolationMode.BILINEAR),
-    data_io.RandomGaussNoise()
-
+    data_io.RandomGaussNoise(),
+    transforms.Resize(224)
 ])
+
 train_transforms = transforms.Compose([
     transforms.Grayscale(),
     transforms.RandomAffine(degrees=10,
@@ -119,6 +120,7 @@ train_transforms = transforms.Compose([
                             interpolation=transforms.InterpolationMode.BILINEAR),
     data_io.RandomGaussNoise()
 ])
+
 no_transf = transforms.Pad(48, fill=255)
 topil = transforms.ToPILImage()
 
@@ -139,3 +141,64 @@ for i, (ax1, ax2, ax3) in enumerate(axes):
 fig.set_size_inches(8, 16)
 fig.tight_layout()
 fig.savefig("../figs/transforms_vrt.png")
+
+with np.load("test_results_test.npz") as dat:
+    pred = dat["predictions"]
+    truths = dat["truths"] != 0
+
+
+nums = []
+paths = {}
+for img_f in data_io.IMG_FOLDER.iterdir():
+    num = int(img_f.stem[2:])
+    if (num not in test_set):
+        continue
+    nums.append(num)
+    paths[num] = img_f
+nums = np.array(nums)
+
+correct = np.arange(pred.shape[0])[np.all(truths == pred, axis=-1)]
+wrong = np.arange(pred.shape[0])[np.any(truths != pred, axis=-1)]
+fp = np.arange(pred.shape[0])[np.any(
+    (truths == False)*(pred == True), axis=-1
+)]
+fn = np.arange(pred.shape[0])[np.any(
+    (truths == True)*(pred == False), axis=-1
+)]
+
+fig, axes = plt.subplots(ncols=3, nrows=4)
+for ax in axes.flatten():
+    num = nums[random.choice(correct)]
+    im = data_io.read_image(str(data_io.IMG_FOLDER / ("im%d.jpg" % num)))
+    if (im.shape[0] == 1):
+        im = im.expand(3, *im.shape[1:])
+    lbls = [l for l in labels if num in labels[l]]
+    ax.imshow(np.array(topil(im)))
+    ax.set_title(", ".join(lbls) if lbls else "-")
+    ax.axis("off")
+
+fig.set_size_inches(8, 12)
+fig.tight_layout()
+fig.savefig("../figs/pred_correct.png")
+lbl_names = [l for l in labels]
+
+fig, axes = plt.subplots(ncols=3, nrows=4)
+for ax in axes.flatten():
+    ci = random.choice(wrong)
+    num = nums[ci]
+    im = data_io.read_image(str(data_io.IMG_FOLDER / ("im%d.jpg" % num)))
+    if (im.shape[0] == 1):
+        im = im.expand(3, *im.shape[1:])
+    lbls = [l for l in labels if num in labels[l]]
+    guessed_lbls = [lbl_names[li] for li in range(len(labels)) if pred[ci, li]]
+    ax.imshow(np.array(topil(im)))
+    title = ", ".join(lbls) if lbls else "-"
+    title += "\n"
+    title += r"$\rightarrow$ "
+    title += ", ".join(guessed_lbls) if guessed_lbls else "-"
+    ax.set_title(title)
+    ax.axis("off")
+
+fig.set_size_inches(12, 16)
+fig.tight_layout()
+fig.savefig("../figs/pred_wrong.png")
