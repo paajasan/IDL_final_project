@@ -101,15 +101,15 @@ def make_and_train_model(binaryepochs: int,
         model = models.Pretrained(len(labels),
                                   train_all=train_all).to(device=device)
         train_transforms = transforms.Compose([
-            transforms.Pad(48),
-            transforms.RandomAffine(degrees=20,
+            # transforms.Pad(48, fill=127),
+            transforms.RandomAffine(degrees=15,
                                     translate=(0.1, 0.1),
-                                    scale=(1.0, 1.75),
-                                    shear=10,
+                                    scale=(0.8, 1.2),
+                                    shear=5,
                                     interpolation=transforms.InterpolationMode.BILINEAR),
             data_io.RandomGaussNoise()
         ])
-        test_transforms = transforms.Pad(48)
+        # test_transforms = transforms.Pad(48, fill=127)
     else:
         model = models.CNN(len(labels), 128, 128).to(device=device)
         train_transforms = transforms.Compose([

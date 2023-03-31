@@ -64,7 +64,7 @@ def load_and_test_model(batch_size: int, model_nums: List[int], pretrained: bool
     else:
         if (pretrained):
             model = models.Pretrained(len(labels)).to(device)
-            test_transforms = transforms.Pad(48)
+            # test_transforms = transforms.Pad(48, fill=127)
         else:
             model = models.CNN(len(labels), 128, 128).to(device)
         data_io.load_model_params(model, model_nums[0], pretrained=pretrained)
@@ -99,6 +99,8 @@ def load_and_test_model(batch_size: int, model_nums: List[int], pretrained: bool
                                                           dev_loader,
                                                           test_loader,
                                                           device)
+
+    score_utils.print_full_metrics(test_metrics, labels)
 
     return model, dev_metrics, train_metrics, test_metrics
 
