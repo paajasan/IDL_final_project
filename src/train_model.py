@@ -11,8 +11,6 @@ import time
 import copy
 import collections
 
-from typing import Dict, Set, Any
-
 import score_utils
 import train_utils
 import data_io
@@ -39,7 +37,6 @@ def train_model(model: nn.Module,
     best_val_epc = -1
     for epoch in range(maxepoch):
         starttime = time.time()
-        # print epoch info
         print("Training epoch %d:" % (epoch+1))
         # train epoch
         metrics = train_utils.train_epoch(model=model,
@@ -51,7 +48,6 @@ def train_model(model: nn.Module,
         # Append metrics to dict
         for key in metrics:
             train_metr[key].append(metrics[key])
-        # Print metrics
         score_utils.print_metrics(metrics, "Train")
 
         # Calculate metrics for dev set
@@ -60,12 +56,15 @@ def train_model(model: nn.Module,
                                           device,
                                           loss_function,
                                           binary_model=binary_model)
+
         for key in metrics:
             dev_metr[key].append(metrics[key])
         score_utils.print_metrics(metrics, "Dev")
 
         # Save the currently best model
         if (best_reduce(metrics[best_metric]) > best_val):
+            # We only copy the params if use_best=True
+            # Otehrwise we only keep track of which would have been the best epoch
             if (use_best):
                 best_params = copy.deepcopy(model.state_dict())
             best_val = best_reduce(metrics[best_metric])
@@ -95,6 +94,8 @@ def make_and_train_model(binaryepochs: int,
                          use_best: bool = False):
     labels, train_set, dev_set, _ = data_io.load_splits()
 
+    # Set test transform to None
+    # This allows easily changing to using the padding for test data later
     test_transforms = None
 
     if (pretrained):
@@ -121,8 +122,10 @@ def make_and_train_model(binaryepochs: int,
             data_io.RandomGaussNoise()
         ])
 
+    # an image cache, so that images are kept in emmory and not reloaded every time
     _cache = {}
 
+    # Train data coonsist of each image and its horizontally flipped mirror image
     train_data = data_io.ImageDataSet(train_set,
                                       labels,
                                       transforms=train_transforms,
@@ -139,6 +142,7 @@ def make_and_train_model(binaryepochs: int,
                                     transforms=test_transforms,
                                     preprocessor=model.preprocess)
 
+    # Get the weights to bias the loss to take the positive samples more into account
     train_weights = train_utils.pos_weights(train_set, labels).to(device)
 
     print("Possible labels:", [key for key in labels])
@@ -148,6 +152,7 @@ def make_and_train_model(binaryepochs: int,
         train_data, batch_size=batch_size, shuffle=True)
     dev_loader = data.DataLoader(dev_data, batch_size=batch_size)
 
+    # If we are first running a binary model, do so
     if (binaryepochs > 0):
         if (pretrained):
             raise ValueError("Can't do a binary model when pretrained=True")

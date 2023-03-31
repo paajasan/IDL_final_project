@@ -29,6 +29,9 @@ def write_set_file(filename: str, data: Set[int]):
 
 
 def count_labels(labels, train_set, dev_set, test_set, print_latex=False):
+    """
+    Count labels in each set and print it. Possibly in alatex friendly format.
+    """
     total_data = len(train_set)+len(dev_set)+len(test_set)
 
     if (print_latex):
@@ -106,6 +109,9 @@ def read_labels() -> Dict[str, Set[int]]:
 
 
 def split_data(labels: Dict[str, Set[int]]) -> Tuple[Set[int], Set[int], Set[int]]:
+    """
+    Make a train-ev-test split of the data
+    """
     labeled = set().union(*[labels[lbl] for lbl in labels])
 
     # get "names" of all data points
@@ -153,6 +159,10 @@ def split_data(labels: Dict[str, Set[int]]) -> Tuple[Set[int], Set[int], Set[int
 
 
 def load_splits(force_reload=False, allow_reload=True):
+    """
+    Loads the splits, or if not existing and allow_reload=True,
+    makes new ones.
+    """
     labels = read_labels()
     try:
         if (force_reload):
@@ -207,6 +217,12 @@ def load_model_params(model, num=1, pretrained=False, directory=pathlib.Path("."
 
 
 class RandomGaussNoise(torch.nn.Module):
+    """
+    A tranformation to add random gaussian noise.
+    The input should between 0 and 255, and will be clipped
+    back to that range after adding the noise.
+    """
+
     def __init__(self, std=10) -> None:
         super().__init__()
         self.std = std
@@ -221,6 +237,11 @@ class RandomGaussNoise(torch.nn.Module):
 
 
 class UnlabeledImageDataSet(data.Dataset):
+    """
+    A Dataset for loading the images.
+    Does not load labels (targets), returning the number of each image instead.
+    """
+
     def __init__(self, load_set: Set[int] = None,
                  transforms=None,
                  img_folder=IMG_FOLDER,
@@ -279,6 +300,11 @@ class UnlabeledImageDataSet(data.Dataset):
 
 
 class ImageDataSet(UnlabeledImageDataSet):
+    """
+    A Dataset for loading the images.
+    Also return targets.
+    """
+
     def __init__(self, load_set: Set[int],
                  labels: Dict[str, Set[int]],
                  transforms=None,

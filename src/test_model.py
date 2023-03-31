@@ -19,6 +19,9 @@ def test_model(model: nn.Module,
                dev_loader: data.DataLoader,
                test_loader: data.DataLoader,
                device: torch.device):
+    """
+    Calculates and prints scores for each of the three sets
+    """
 
     train_metrics = score_utils.score_model(model,
                                             train_loader,
@@ -45,6 +48,9 @@ def test_model(model: nn.Module,
 
 
 def load_and_test_model(batch_size: int, model_nums: List[int], pretrained: bool, device: torch.device):
+    """
+    Loads models and the train, dev and test set and calculates and prints scores for each of them
+    """
     labels, train_set, dev_set, test_set = data_io.load_splits(
         allow_reload=False
     )
