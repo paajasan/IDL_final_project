@@ -5,6 +5,7 @@ from torch import nn
 from transformers import BeitImageProcessor, BeitModel, BeitConfig, AutoProcessor
 
 LAST_LAYER_SIZE = 512
+PRETRAINED_CACHE = ".pretrained_cache"
 
 
 class CNN_base(nn.Module):
@@ -83,11 +84,11 @@ class Pretrained(nn.Module):
 
         self.preprocess = AutoProcessor.from_pretrained(
             'microsoft/beit-base-patch16-224-pt22k-ft22k',
-            cache_dir=".pretrained_cache"
+            cache_dir=PRETRAINED_CACHE
         )
         self.beit = BeitModel.from_pretrained(
             'microsoft/beit-base-patch16-224-pt22k-ft22k',
-            cache_dir=".pretrained_cache"
+            cache_dir=PRETRAINED_CACHE
         )
 
         self.classifier = nn.Sequential(
