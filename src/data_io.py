@@ -204,7 +204,7 @@ class RandomGaussNoise(torch.nn.Module):
 
 
 class UnlabeledImageDataSet(data.Dataset):
-    def __init__(self, load_set: Set[int],
+    def __init__(self, load_set: Set[int] = None,
                  transforms=None,
                  img_folder=IMG_FOLDER,
                  cache: Dict[int, torch.Tensor] = {},
@@ -214,13 +214,13 @@ class UnlabeledImageDataSet(data.Dataset):
         paths = {}
         for img_f in img_folder.iterdir():
             num = int(img_f.stem[2:])
-            if (num not in load_set):
+            if ((not load_set is None) and num not in load_set):
                 continue
             nums.append(num)
             paths[num] = img_f
 
         # Make sure we got all
-        assert load_set == set(nums)
+        assert load_set is None or load_set == set(nums)
 
         self.transforms = transforms
         self.nums = nums
