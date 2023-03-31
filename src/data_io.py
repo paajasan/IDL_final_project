@@ -203,9 +203,8 @@ class RandomGaussNoise(torch.nn.Module):
         return img.to(dtype)
 
 
-class ImageDataSet(data.Dataset):
+class UnlabeledImageDataSet(data.Dataset):
     def __init__(self, load_set: Set[int],
-                 labels: Dict[str, Set[int]],
                  transforms=None,
                  img_folder=IMG_FOLDER,
                  cache: Dict[int, torch.Tensor] = {},
@@ -228,14 +227,6 @@ class ImageDataSet(data.Dataset):
         self.paths = paths
         self.cache = cache
         self.preprocessor = preprocessor
-        # Make label vectors
-        self.labels = {}
-        for num in paths:
-            lbl = torch.zeros(len(labels))
-            for i, l in enumerate(labels):
-                if (num in labels[l]):
-                    lbl[i] = 1
-            self.labels[num] = lbl
 
     def __len__(self):
         return len(self.nums)
@@ -266,7 +257,38 @@ class ImageDataSet(data.Dataset):
                 self.preprocessor(dat)["pixel_values"][0].copy()
             )
 
-        return dat/255, self.labels[num]
+        return dat/255, num
+
+
+class ImageDataSet(UnlabeledImageDataSet):
+    def __init__(self, load_set: Set[int],
+                 labels: Dict[str, Set[int]],
+                 transforms=None,
+                 img_folder=IMG_FOLDER,
+                 cache: Dict[int, torch.Tensor] = {},
+                 preprocessor=None):
+        super().__init__(
+            load_set=load_set,
+            transforms=transforms,
+            img_folder=img_folder,
+            cache=cache,
+            preprocessor=preprocessor
+        )
+        # Make label vectors
+        self.labels = {}
+        for num in self.paths:
+            lbl = torch.zeros(len(labels))
+            for i, l in enumerate(labels):
+                if (num in labels[l]):
+                    lbl[i] = 1
+            self.labels[num] = lbl
+
+    def __len__(self):
+        return len(self.nums)
+
+    def __getitem__(self, index):
+        dat, num = super().__getitem__(index)
+        return dat, self.labels[num]
 
 
 if __name__ == "__main__":
