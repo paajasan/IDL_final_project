@@ -29,8 +29,17 @@ def write_set_file(filename: str, data: Set[int]):
             fio.write("%d\n" % i)
 
 
-def count_labels(labels, train_set, dev_set, test_set):
+def count_labels(labels, train_set, dev_set, test_set, print_latex=False):
     total_data = len(train_set)+len(dev_set)+len(test_set)
+
+    if (print_latex):
+        print()
+        print(r"\begin{tabular}{|l|rr|rr|rr|}")
+        print(r"\hline")
+        print(r"label & \multicolumn{2}{c|}{train (\#, \%)}", end="")
+        print(r" & \multicolumn{2}{c|}{dev (\#, \%)}", end="")
+        print(r" & \multicolumn{2}{c|}{test (\#, \%)} \\")
+        print(r"\hline")
     # Count data from each category, in each set
     for label in labels:
         idev = 0
@@ -46,23 +55,42 @@ def count_labels(labels, train_set, dev_set, test_set):
             if (s in train_set):
                 itrain += 1
         assert tot == idev+itrain+itest
-        print("%s:\n  train %5d, dev %5d, test %5d" % (
-            label, itrain, idev, itest
-        ))
-        print("     %8.2f,  %8.2f,   %8.2f" % (
-            itrain*100/tot, idev*100/tot, itest*100/tot
-        ))
+        if (print_latex):
+            print(r"%s & %d & %.2f & %d & %.2f & %d & %.2f\\" % (
+                label,
+                itrain, itrain*100/tot,
+                idev, idev*100/tot,
+                itest, itest*100/tot
+            ))
+        else:
+            print("%s:\n  train %5d, dev %5d, test %5d" % (
+                label, itrain, idev, itest
+            ))
+            print("     %8.2f,  %8.2f,   %8.2f" % (
+                itrain*100/tot, idev*100/tot, itest*100/tot
+            ))
 
-    print("\nTotal:")
-    print("train:", len(train_set),
-          "%8.3f" % (100*len(train_set)/total_data),
-          "%")
-    print("dev:  ", len(dev_set),
-          "%8.3f" % (100*len(dev_set)/total_data),
-          "%")
-    print("test: ", len(test_set),
-          "%8.3f" % (100*len(test_set)/total_data),
-          "%")
+    if (print_latex):
+        print(r"\hline")
+        print(r"%s & %d & %.2f & %d & %.2f & %d & %.2f\\" % (
+            "Total",
+            len(train_set), 100*len(train_set)/total_data,
+            len(dev_set), 100*len(dev_set)/total_data,
+            len(test_set), 100*len(test_set)/total_data,
+        ))
+        print(r"\hline")
+        print(r"\end{tabular}")
+    else:
+        print("\nTotal:")
+        print("train:", len(train_set),
+              "%8.3f" % (100*len(train_set)/total_data),
+              "%")
+        print("dev:  ", len(dev_set),
+              "%8.3f" % (100*len(dev_set)/total_data),
+              "%")
+        print("test: ", len(test_set),
+              "%8.3f" % (100*len(test_set)/total_data),
+              "%")
 
 
 def read_labels() -> Dict[str, Set[int]]:
@@ -114,8 +142,6 @@ def split_data(labels: Dict[str, Set[int]]) -> Tuple[Set[int], Set[int], Set[int
                 dev_set.add(s)
                 train_set.remove(s)
 
-    count_labels(labels, train_set, dev_set, test_set)
-
     # delete the "unlabeled" label
     del labels["unlabeled"]
 
@@ -164,13 +190,16 @@ def load_model_params(model, num=1, pretrained=False):
 
 
 class RandomGaussNoise(torch.nn.Module):
-    def __init__(self, std=5) -> None:
+    def __init__(self, std=10) -> None:
         super().__init__()
         self.std = std
 
     def forward(self, img):
         dtype = img.dtype
-        img = img + torch.randn(img.shape)*self.std
+        img = img+torch.trunc(
+            torch.randn(img.shape)*self.std
+        ).to(int)
+        img = img.clip(0, 255)
         return img.to(dtype)
 
 
@@ -216,11 +245,11 @@ class ImageDataSet(data.Dataset):
         if (num not in self.cache):
             p = self.paths[num]
             dat = read_image(str(p))
-            # Not the clearest vode, but if self.preprocessor is None,
+            # Not the clearest code, but if self.preprocessor is None,
             # we are not using pretrained data, and might as well use
             # the grayscale images.
             if (self.preprocessor is None):
-                dat = transforms.Grayscale()(read_image(str(p)))/255
+                dat = transforms.Grayscale()(dat)
             elif (dat.shape[0] == 1):
                 # But if we do use the pretrained model, we should
                 # expand the grayscale images to rgb
@@ -231,11 +260,16 @@ class ImageDataSet(data.Dataset):
 
         if (not self.transforms is None):
             dat = self.transforms(dat)
-        if (self.preprocessor is None):
-            return dat/255, self.labels[num]
 
-        return torch.Tensor(self.preprocessor(dat)["pixel_values"][0].copy())/255, self.labels[num]
+        if (not self.preprocessor is None):
+            dat = torch.Tensor(
+                self.preprocessor(dat)["pixel_values"][0].copy()
+            )
+
+        return dat/255, self.labels[num]
 
 
 if __name__ == "__main__":
-    load_splits()
+    labels, train_set, dev_set, test_set = load_splits()
+
+    count_labels(labels, train_set, dev_set, test_set, print_latex=False)
