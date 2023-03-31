@@ -128,18 +128,18 @@ def make_and_train_model(binaryepochs: int,
     # Train data coonsist of each image and its horizontally flipped mirror image
     train_data = data_io.ImageDataSet(train_set,
                                       labels,
-                                      transforms=train_transforms,
+                                      load_transforms=train_transforms,
                                       cache=_cache,
                                       preprocessor=model.preprocess) +\
         data_io.ImageDataSet(train_set, labels,
-                             transforms=transforms.Compose((
+                             load_transforms=transforms.Compose((
                                  ftransforms.hflip,
                                  train_transforms)),
                              cache=_cache,
                              preprocessor=model.preprocess)
 
     dev_data = data_io.ImageDataSet(dev_set, labels,
-                                    transforms=test_transforms,
+                                    load_transforms=test_transforms,
                                     preprocessor=model.preprocess)
 
     # Get the weights to bias the loss to take the positive samples more into account

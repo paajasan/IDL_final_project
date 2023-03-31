@@ -76,13 +76,13 @@ def load_and_test_model(batch_size: int, model_nums: List[int], pretrained: bool
         data_io.load_model_params(model, model_nums[0], pretrained=pretrained)
 
     train_data = data_io.ImageDataSet(train_set, labels,
-                                      transforms=test_transforms,
+                                      load_transforms=test_transforms,
                                       preprocessor=model.preprocess)
     dev_data = data_io.ImageDataSet(dev_set, labels,
-                                    transforms=test_transforms,
+                                    load_transforms=test_transforms,
                                     preprocessor=model.preprocess)
     test_data = data_io.ImageDataSet(test_set, labels,
-                                     transforms=test_transforms,
+                                     load_transforms=test_transforms,
                                      preprocessor=model.preprocess)
 
     train_weights = train_utils.pos_weights(train_set, labels).to(device)

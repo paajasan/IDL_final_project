@@ -5,7 +5,9 @@ import numpy as np
 import collections
 
 import torch
+from torch import nn
 from torch.utils import data
+from torchvision import transforms
 from torchvision.io import read_image
 
 from typing import Dict, Set, Tuple, List
@@ -243,7 +245,7 @@ class UnlabeledImageDataSet(data.Dataset):
     """
 
     def __init__(self, load_set: Set[int] = None,
-                 transforms=None,
+                 load_transforms: nn.Module = None,
                  img_folder=IMG_FOLDER,
                  cache: Dict[int, torch.Tensor] = {},
                  preprocessor=None):
@@ -260,7 +262,7 @@ class UnlabeledImageDataSet(data.Dataset):
         # Make sure we got all
         assert load_set is None or load_set == set(nums)
 
-        self.transforms = transforms
+        self.transforms = load_transforms
         self.nums = nums
         self.paths = paths
         self.cache = cache
@@ -307,13 +309,13 @@ class ImageDataSet(UnlabeledImageDataSet):
 
     def __init__(self, load_set: Set[int],
                  labels: Dict[str, Set[int]],
-                 transforms=None,
+                 load_transforms: nn.Module = None,
                  img_folder=IMG_FOLDER,
                  cache: Dict[int, torch.Tensor] = {},
                  preprocessor=None):
         super().__init__(
             load_set=load_set,
-            transforms=transforms,
+            load_transforms=load_transforms,
             img_folder=img_folder,
             cache=cache,
             preprocessor=preprocessor
