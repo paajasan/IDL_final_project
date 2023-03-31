@@ -6,6 +6,8 @@ import numpy as np
 
 from typing import Dict, Union
 
+import models
+
 
 def print_metrics(metrics, set_name):
     print("%-5s loss: %.4f, acc.: %7.4f" %
@@ -14,7 +16,7 @@ def print_metrics(metrics, set_name):
     if (metrics["accuracy"].shape[0] > 1):
         print()
         for name, func in zip(("min", "mean", "max"), (np.min, np.mean, np.max)):
-            print(" %-4s by lbl   acc: %.4f, prec %.4f, rec %.4f, spec: %.4f, F1.: %7.4f" %
+            print(" %-4s by lbl   acc: %.4f, prec: %.4f, rec: %.4f, spec: %.4f, F1.: %7.4f" %
                   (name,
                    func(metrics["accuracy"])*100,
                    func(np.nan_to_num(metrics["precision"]))*100,
@@ -22,11 +24,37 @@ def print_metrics(metrics, set_name):
                    func(np.nan_to_num(metrics["specificity"]))*100,
                    func(np.nan_to_num(metrics["F1"])*100)))
     else:
-        print(", prec %.4f, rec %.4f, spec: %.4f, F1.: %7.4f" %
+        print(", prec: %.4f, rec: %.4f, spec: %.4f, F1.: %7.4f" %
               (metrics["precision"]*100,
                metrics["recall"]*100,
                metrics["specificity"]*100,
                metrics["F1"]*100))
+
+
+def print_full_metrics(metrics, labels, latex=False):
+    frm_str = " %-8s   acc: %6.2f, prec: %6.2f, rec: %6.2f, spec: %6.2f, F1.: %6.2f"
+    if (latex):
+        print()
+        print(r"\begin{tabular}{|l|rrrrr|}")
+        print(r"\hline")
+        print(r" label & accuracy & precision & recall & specificity & F1 \\")
+        print(r"\hline")
+        frm_str = r" %s  & %.2f & %.2f & %.2f & %.2f & %.2f\\"
+    else:
+        print("Full metrics:")
+
+    for i, label in enumerate(labels):
+        print(frm_str %
+              (label,
+               metrics["accuracy"][i]*100,
+               metrics["precision"][i]*100,
+               metrics["recall"][i]*100,
+               metrics["specificity"][i]*100,
+               metrics["F1"][i]*100))
+
+    if (latex):
+        print(r"\hline")
+        print(r"\end{tabular}")
 
 
 def add_counts(counts, pred, target):
@@ -61,6 +89,17 @@ def calc_metrics(counts):
     return metrics
 
 
+def forward_pass(model: nn.Module,
+                 data: torch.Tensor):
+    logits = model(data)
+    if (type(model) is models.CNN_ensemble):
+        preds = model.avg_proba(logits) > 0.5
+        logits = sum(logits)/len(logits)
+    else:
+        preds = logits > 0
+    return logits, preds
+
+
 def score_model(model: nn.Module,
                 dataloader: data.DataLoader,
                 device: torch.device,
@@ -89,16 +128,14 @@ def score_model(model: nn.Module,
                 target = target.any(axis=-1).to(dtype=int)
             data, target = data.to(device), target.to(device)
 
-            probs = model(data)
+            logits, pred = forward_pass(model, data)
             if (not loss_function is None):
-                loss += loss_function(probs, target).item()
+                loss += loss_function(logits, target).item()
 
             if (binary_model):
-                pred = probs.argmax(axis=-1, keepdim=True)
+                pred = logits.argmax(axis=-1, keepdim=True)
                 # Add a new dimension as the last dimension
                 target = target[..., None]
-            else:
-                pred = probs > 0
 
             total += pred.shape[0]
 
