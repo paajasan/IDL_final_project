@@ -1,8 +1,7 @@
-import numpy as np
 import torch
 from torch import nn
 
-from transformers import BeitImageProcessor, BeitModel, BeitConfig, AutoProcessor
+from transformers import BeitModel, AutoProcessor
 
 LAST_LAYER_SIZE = 512
 PRETRAINED_CACHE = ".pretrained_cache"
