@@ -10,6 +10,9 @@ import models
 
 
 def print_metrics(metrics, set_name):
+    """
+    Print the loss, total accuracy and min, avg and max for each metric
+    """
     print("%-5s loss: %.4f, acc.: %7.4f" %
           (set_name, metrics["loss"], metrics["total_accuracy"]*100),
           end="")
@@ -32,6 +35,9 @@ def print_metrics(metrics, set_name):
 
 
 def print_full_metrics(metrics, labels, latex=False):
+    """
+    Print the metrics for each label, possibly in a latex-copypastable table format
+    """
     frm_str = " %-8s   acc: %6.2f, prec: %6.2f, rec: %6.2f, spec: %6.2f, F1.: %6.2f"
     if (latex):
         print()
@@ -58,6 +64,9 @@ def print_full_metrics(metrics, labels, latex=False):
 
 
 def add_counts(counts, pred, target):
+    """
+    Add up each of the counts
+    """
     counts["total"] += pred.shape[0]
     counts["correct"] += ((pred == target).all(axis=1)).sum()
     counts["TP"] += ((pred == 1)*(target == 1)).sum(axis=0)
@@ -67,6 +76,9 @@ def add_counts(counts, pred, target):
 
 
 def calc_metrics(counts):
+    """
+    Calculate total accuracy, accuracy, precision, recall, specificity and F1 ffrom the given counts.
+    """
     metrics = {"total_accuracy":
                np.array(counts["correct"] / counts["total"])
                }
@@ -91,6 +103,11 @@ def calc_metrics(counts):
 
 def forward_pass(model: nn.Module,
                  data: torch.Tensor):
+    """
+    Does a forward pass with the model on the data.
+    Takes care of calling the correct fuinctions if model is
+    and ensemble model.
+    """
     logits = model(data)
     if (type(model) is models.CNN_ensemble):
         preds = model.avg_proba(logits) > 0.5
@@ -105,17 +122,29 @@ def score_model(model: nn.Module,
                 device: torch.device,
                 loss_function: nn.modules.loss._Loss = None,
                 binary_model: bool = False,
-                return_preds: bool = False):  # -> Dict[str, Union[float, torch.Tensor]]:
+                return_preds: bool = False
+                ) -> Dict[str, Union[float,
+                                     torch.Tensor,
+                                     np.ndarray]]:
+    """
+    Runs the model on the dataset, calucalting scoring metrics for each label and the total score and loss.
+    Optionally return the predictions of the model (and truths).
+    All output is in a single dictionary.
+    """
     loss = 0
+    # Get number of labels. Not the best way, but now there is no need for an additional parameter
     if (not binary_model):
         numlabels = dataloader.__iter__().__next__()[1].shape[-1]
     else:
         numlabels = 1
+    # Set intial counts to zero
+    # COunting True/False Positives/Negatives
     counts = {cnt: torch.zeros(numlabels, dtype=int)
               for cnt in ("TP", "FP", "TN", "FN")}
     counts["total"] = 0
     counts["correct"] = 0
 
+    # if returning preds, make lists to append to
     if return_preds:
         predictions = []
         truths = []
@@ -124,27 +153,31 @@ def score_model(model: nn.Module,
     with torch.no_grad():
         model.eval()
         for data, target in dataloader:
+            # For the binary model we make a target that is one if any of the labels is one
             if (binary_model):
                 target = target.any(axis=-1).to(dtype=int)
             data, target = data.to(device), target.to(device)
 
+            # Make the forward pass
             logits, pred = forward_pass(model, data)
             if (not loss_function is None):
                 loss += loss_function(logits, target).item()
 
+            # handle the possible binary model
             if (binary_model):
                 pred = logits.argmax(axis=-1, keepdim=True)
-                # Add a new dimension as the last dimension
+                # Add a new dimension as the last dimension to keep dimensionality
                 target = target[..., None]
 
+            # add up the counts
             total += pred.shape[0]
-
             add_counts(counts, pred.cpu(), target.cpu())
 
             if return_preds:
                 predictions.append(pred)
                 truths.append(target)
         model.train()
+
     metrics = calc_metrics(counts)
     if (not loss_function is None):
         metrics["loss"] = loss / total
