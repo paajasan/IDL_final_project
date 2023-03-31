@@ -9,7 +9,7 @@ from torch.utils import data
 from torchvision import transforms
 from torchvision.io import read_image
 
-from typing import Dict, Set, Tuple
+from typing import Dict, Set, Tuple, List
 
 IMG_FOLDER = pathlib.Path("../images")
 ANNOT_FOLDER = pathlib.Path("../annotations")
@@ -184,9 +184,27 @@ def save_test_results(dev_metr, train_metr, test_metr, pretrained=False):
     np.savez_compressed("test_results_test.npz", **test_metr)
 
 
-def load_model_params(model, num=1, pretrained=False):
+def save_predictions(labels: List[str],
+                     nums: List[int],
+                     predictions: torch.Tensor,
+                     output_dir: pathlib.Path):
+    print("Getting labels-wise sets from predictions")
+    label_sets = {lbl: set() for lbl in labels}
+    for num, pred in zip(nums, predictions):
+        for lbl, p in zip(labels, pred):
+            if (p):
+                label_sets[lbl].add(num)
+
+    print("Writing sets")
+    for lbl in label_sets:
+        write_set_file(output_dir / f"{lbl}.txt", label_sets[lbl])
+
+
+def load_model_params(model, num=1, pretrained=False, directory=pathlib.Path(".")):
     name = ".pre" if (pretrained) else ""
-    model.load_state_dict(torch.load("model%s.%d.pt" % (name, num)))
+    model.load_state_dict(torch.load(
+        str(directory / ("model%s.%d.pt" % (name, num))))
+    )
 
 
 class RandomGaussNoise(torch.nn.Module):
