@@ -1,5 +1,6 @@
 dump
 annotations
+test_run
 run/*
 images
 figs
