@@ -6,7 +6,6 @@ import collections
 
 import torch
 from torch.utils import data
-from torchvision import transforms
 from torchvision.io import read_image
 
 from typing import Dict, Set, Tuple, List
@@ -245,6 +244,7 @@ class UnlabeledImageDataSet(data.Dataset):
         self.paths = paths
         self.cache = cache
         self.preprocessor = preprocessor
+        self.grayscale = transforms.Grayscale()
 
     def __len__(self):
         return len(self.nums)
@@ -258,7 +258,7 @@ class UnlabeledImageDataSet(data.Dataset):
             # we are not using pretrained data, and might as well use
             # the grayscale images.
             if (self.preprocessor is None):
-                dat = transforms.Grayscale()(dat)
+                dat = self.grayscale(dat)
             elif (dat.shape[0] == 1):
                 # But if we do use the pretrained model, we should
                 # expand the grayscale images to rgb
