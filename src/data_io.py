@@ -297,8 +297,10 @@ class UnlabeledImageDataSet(data.Dataset):
             dat = torch.Tensor(
                 self.preprocessor(dat)["pixel_values"][0].copy()
             )
+        else:
+            dat = dat/255
 
-        return dat/255, num
+        return dat, num
 
 
 class ImageDataSet(UnlabeledImageDataSet):
