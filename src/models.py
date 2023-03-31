@@ -55,9 +55,6 @@ class CNN(CNN_base):
     def predict(self, x):
         return self.forward(x) > 0
 
-    def predict_proba(self, x):
-        return nn.functional.sigmoid(self.forward(x))
-
 
 class CNN_ensemble(CNN):
     def __init__(self, num_classes, width, height, num_children=5):
@@ -68,13 +65,16 @@ class CNN_ensemble(CNN):
                                   for i in range(num_children)])
 
     def forward(self, x):
-        return sum([cnn(x) for cnn in self.cnns])/len(self.cnns)
+        return [cnn(x) for cnn in self.cnns]
 
-    def avg_proba(self, x):
-        return sum([cnn.predict_proba(x) for cnn in self.cnns])/len(self.cnns)
+    def avg_proba(self, logits):
+        return sum([torch.sigmoid(li) for li in logits])/len(self.cnns)
 
-    def major_vote(self, x):
-        return sum([cnn.predict(x) for cnn in self.cnns])/len(self.cnns) > 0.5
+    def major_vote(self, logits):
+        return sum([li > 0 for li in logits])/len(self.cnns) > 0.5
+
+    def predict(self, x):
+        return self.major_vote(self.forward(x))
 
 
 class Pretrained(nn.Module):
@@ -113,3 +113,6 @@ class Pretrained(nn.Module):
         if (self.train_all):
             return self.parameters()
         return self.classifier.parameters()
+
+    def predict(self, x):
+        return self.forward(x) > 0
